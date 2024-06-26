@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Route, Routes, NavLink } from "react-router-dom";
-import "./app.css";
 
 interface Todo {
   id: string;
@@ -8,10 +7,11 @@ interface Todo {
   isDone: boolean;
 }
 
-const TodoApp: React.FC = () => {
+export default function App() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [newTodo, setNewTodo] = useState<string>("");
-  const [editingTodo, setEditingTodo] = useState<string>("");
+  const [filter, setFilter] = useState<string>("all");
+  const [toggleAll, setToggleAll] = useState<boolean>(false);
 
   useEffect(() => {
     fetch("https://my-json-server.typicode.com/EnkiGroup/DesafioReactFrontendJunior2024/todos")
@@ -31,58 +31,16 @@ const TodoApp: React.FC = () => {
     }
   };
 
-  const editTodo = (id: string, title: string) => {
-    setTodos(todos.map(todo => (todo.id === id ? { ...todo, title } : todo)));
-    setEditingTodo("");
-  };
+  const filteredTodos = todos.filter(todo => {
+    if (filter === "active") return !todo.isDone;
+    if (filter === "completed") return todo.isDone;
+    return true;
+  });
 
-  const renderTodos = (filter: string) => {
-    const filteredTodos = todos.filter(todo => {
-      if (filter === "active") return !todo.isDone;
-      if (filter === "completed") return todo.isDone;
-      return true;
-    });
-
-    return filteredTodos.map(todo => (
-      <li key={todo.id} className={todo.isDone ? "completed" : ""}>
-        <div className="view">
-          <input
-            className="toggle"
-            type="checkbox"
-            checked={todo.isDone}
-            onChange={() => {
-              setTodos(todos.map(t => t.id === todo.id ? { ...t, isDone: !t.isDone } : t));
-            }}
-          />
-          {editingTodo === todo.id ? (
-            <input
-              className="edit"
-              value={todo.title}
-              onBlur={(e) => editTodo(todo.id, e.target.value)}
-              onChange={(e) => {
-                const updatedTitle = e.target.value;
-                setTodos(todos.map(t => t.id === todo.id ? { ...t, title: updatedTitle } : t));
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  editTodo(todo.id, e.currentTarget.value);
-                }
-              }}
-            />
-          ) : (
-            <label onDoubleClick={() => setEditingTodo(todo.id)}>
-              {todo.title}
-            </label>
-          )}
-          <button
-            className="destroy"
-            onClick={() => {
-              setTodos(todos.filter(t => t.id !== todo.id));
-            }}
-          ></button>
-        </div>
-      </li>
-    ));
+  const handleToggleAll = () => {
+    const newToggleAll = !toggleAll;
+    setToggleAll(newToggleAll);
+    setTodos(todos.map(todo => ({ ...todo, isDone: newToggleAll })));
   };
 
   return (
@@ -104,18 +62,24 @@ const TodoApp: React.FC = () => {
             id="toggle-all"
             className="toggle-all"
             type="checkbox"
-            onChange={(e) => {
-              const { checked } = e.target;
-              setTodos(todos.map(todo => ({ ...todo, isDone: checked })));
-            }}
-            checked={todos.length > 0 && todos.every(todo => todo.isDone)}
+            checked={toggleAll}
+            onChange={handleToggleAll}
           />
+          <label htmlFor="toggle-all" />
           <ul className="todo-list">
-            <Routes>
-              <Route path="/active" element={<>{renderTodos("active")}</>} />
-              <Route path="/completed" element={<>{renderTodos("completed")}</>} />
-              <Route path="/" element={<>{renderTodos("all")}</>} />
-            </Routes>
+            {filteredTodos.map(todo => (
+              <li key={todo.id} className={todo.isDone ? "completed" : ""}>
+                <div className="view">
+                  <input className="toggle" type="checkbox" checked={todo.isDone} onChange={() => {
+                    setTodos(todos.map(t => t.id === todo.id ? { ...t, isDone: !t.isDone } : t));
+                  }} />
+                  <label>{todo.title}</label>
+                  <button className="destroy" onClick={() => {
+                    setTodos(todos.filter(t => t.id !== todo.id));
+                  }}></button>
+                </div>
+              </li>
+            ))}
           </ul>
         </section>
         <footer className="footer">
@@ -124,27 +88,27 @@ const TodoApp: React.FC = () => {
           </span>
           <ul className="filters">
             <li>
-              <NavLink end to="/" className={({ isActive }) => isActive ? "selected" : undefined}>All</NavLink>
+              <NavLink to="/" className={({ isActive }) => isActive ? "selected" : ""} onClick={() => setFilter("all")}>All</NavLink>
             </li>
             <li>
-              <NavLink to="/active" className={({ isActive }) => isActive ? "selected" : undefined}>Active</NavLink>
+              <NavLink to="/active" className={({ isActive }) => isActive ? "selected" : ""} onClick={() => setFilter("active")}>Active</NavLink>
             </li>
             <li>
-              <NavLink to="/completed" className={({ isActive }) => isActive ? "selected" : undefined}>Completed</NavLink>
+              <NavLink to="/completed" className={({ isActive }) => isActive ? "selected" : ""} onClick={() => setFilter("completed")}>Completed</NavLink>
             </li>
           </ul>
-          <button
-            className="clear-completed"
-            onClick={() => {
-              setTodos(todos.filter(todo => !todo.isDone));
-            }}
-          >
+          <button className="clear-completed" onClick={() => {
+            setTodos(todos.filter(todo => !todo.isDone));
+          }}>
             Clear completed
           </button>
         </footer>
       </section>
+      <Routes>
+        <Route path="/" element={<div />} />
+        <Route path="/active" element={<div />} />
+        <Route path="/completed" element={<div />} />
+      </Routes>
     </Router>
   );
-};
-
-export default TodoApp;
+}
